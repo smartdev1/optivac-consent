@@ -21,6 +21,38 @@ class ConsentApi
         );
     }
 
+    public function getStatus(string $email, string $type): array
+    {
+        return $this->client->get(
+            '/optivac-ws/api/consents/status',
+            ['email' => $email, 'type' => $type]
+        );
+    }
+
+    public function getStatusByType(string $email, string $type): array
+    {
+        return $this->client->get(
+            '/optivac-ws/api/consents/status/' . $type,
+            ['email' => $email]
+        );
+    }
+
+    public function checkBrevo(string $email, string $type): array
+    {
+        return $this->client->get(
+            '/optivac-ws/api/external/brevo/check',
+            ['email' => $email, 'type' => $type]
+        );
+    }
+
+    public function checkWordPress(string $email, string $type): array
+    {
+        return $this->client->get(
+            '/optivac-ws/api/external/wordpress/check',
+            ['email' => $email, 'type' => $type]
+        );
+    }
+
     public function validate(array $payload): array
     {
         return $this->client->post(

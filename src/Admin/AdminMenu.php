@@ -1,6 +1,6 @@
 <?php
 
-namespace Optivac\Consent\Admin;
+namespace OptivacConsent\Admin;
 
 class AdminMenu
 {
@@ -24,7 +24,6 @@ class AdminMenu
 
     public function render(): void
     {
-        require_once OPTIVAC_CONSENT_PATH . 'src/Admin/ConsentAdminPage.php';
         (new ConsentAdminPage())->render();
     }
 }

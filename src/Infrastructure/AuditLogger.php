@@ -25,8 +25,19 @@ class AuditLogger
             'newsletter' => $newsletter ? 1 : 0,
             'offers'     => $offers ? 1 : 0,
             'source'     => $source,
-            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '',
+            'ip_address' => $this->resolveIp(),
             'created_at' => current_time('mysql'),
         ]);
+    }
+
+    private function resolveIp(): string
+    {
+        foreach (['HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'] as $key) {
+            if (!empty($_SERVER[$key])) {
+                return sanitize_text_field(explode(',', $_SERVER[$key])[0]);
+            }
+        }
+
+        return '';
     }
 }

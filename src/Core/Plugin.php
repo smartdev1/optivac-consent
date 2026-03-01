@@ -4,8 +4,9 @@ namespace OptivacConsent\Core;
 
 use OptivacConsent\Ajax\ConsentController;
 use OptivacConsent\Admin\AdminMenu;
+use OptivacConsent\Admin\SettingsPage;
 use OptivacConsent\Presentation\AssetsManager;
-use OptivacConsent\WooCommerce\WooCommerceIntegration;
+use OptivacConsent\Infrastructure\WooCommerceIntegration;
 
 class Plugin
 {
@@ -14,29 +15,39 @@ class Plugin
     public function boot(): void
     {
         $this->container = new Container();
+        $this->maybeRunInstaller();
         $this->registerHooks();
+    }
+
+    private function maybeRunInstaller(): void
+    {
+        $installed = get_option('optivac_consent_db_version', '');
+
+        if ($installed !== '1.0') {
+            \OptivacConsent\Infrastructure\Installer::install();
+        }
     }
 
     private function registerHooks(): void
     {
-        // AJAX
         $this->container
             ->get(ConsentController::class)
             ->register();
 
-        // ADMIN
         if (is_admin()) {
             $this->container
                 ->get(AdminMenu::class)
                 ->register();
+
+            $this->container
+                ->get(SettingsPage::class)
+                ->register();
         }
 
-        // FRONT ASSETS
         $this->container
             ->get(AssetsManager::class)
             ->register();
 
-        // WOOCOMMERCE
         if (class_exists('WooCommerce')) {
             $this->container
                 ->get(WooCommerceIntegration::class)

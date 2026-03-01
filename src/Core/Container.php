@@ -9,14 +9,13 @@ use Exception;
 class Container
 {
     private array $instances = [];
-    private array $bindings = [];
+    private array $bindings  = [];
 
     public function bind(string $abstract, string|\Closure $concrete): void
     {
         $this->bindings[$abstract] = $concrete;
     }
 
-    
     public function get(string $abstract)
     {
         if (isset($this->instances[$abstract])) {
@@ -53,7 +52,6 @@ class Container
         $dependencies = [];
 
         foreach ($constructor->getParameters() as $param) {
-
             $type = $param->getType();
 
             if (!$type instanceof ReflectionNamedType) {

@@ -1,0 +1,157 @@
+.optivac-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: optivac-fade-in 0.25s ease;
+}
+
+.optivac-modal {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 32px 28px 28px;
+    max-width: 420px;
+    width: 92%;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+    animation: optivac-slide-up 0.25s ease;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.optivac-modal__title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+/* Bloc de consentement — case + label */
+.optivac-consent-block {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding: 14px;
+    background: #fafafa;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.optivac-consent-block:hover {
+    border-color: #c8922a;
+}
+
+.optivac-consent-block input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    margin-top: 1px;
+    accent-color: #c8922a;
+    cursor: pointer;
+}
+
+.optivac-consent-block__text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.4;
+}
+
+/* Mention légale sous les cases */
+.optivac-legal {
+    font-size: 0.78rem;
+    color: #888;
+    line-height: 1.5;
+    margin: 12px 0 24px;
+}
+
+.optivac-legal a {
+    color: #c8922a;
+    text-decoration: underline;
+}
+
+/* Boutons */
+.optivac-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.optivac-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+    letter-spacing: 0.3px;
+}
+
+.optivac-btn:hover {
+    opacity: 0.9;
+}
+
+.optivac-btn:active {
+    transform: scale(0.98);
+}
+
+.optivac-btn-primary {
+    background: #c8922a;
+    color: #fff;
+}
+
+.optivac-btn-secondary {
+    background: transparent;
+    color: #999;
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding: 8px;
+}
+
+.optivac-btn-secondary:hover {
+    color: #555;
+    opacity: 1;
+}
+
+@keyframes optivac-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes optivac-slide-up {
+    from { transform: translateY(24px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* Responsive mobile */
+@media (max-width: 480px) {
+    .optivac-modal {
+        padding: 24px 20px 20px;
+        border-radius: 16px 16px 0 0;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        animation: optivac-slide-mobile 0.3s ease;
+    }
+
+    .optivac-overlay {
+        align-items: flex-end;
+    }
+}
+
+@keyframes optivac-slide-mobile {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+}

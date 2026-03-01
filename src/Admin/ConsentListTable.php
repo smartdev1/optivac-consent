@@ -277,7 +277,7 @@ class ConsentListTable extends \WP_List_Table
             return '<span style="color:#28a745;">✔ Envoyé</span>';
         }
 
-        return '<span style="color:#fd7e14;font-weight:600;">⏳ En attente</span>';
+        return '<span style="color:#fd7e14;font-weight:600;"> En attente</span>';
     }
 
     public function column_email(array $item): string

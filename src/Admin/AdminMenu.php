@@ -13,7 +13,7 @@ class AdminMenu
     {
         add_menu_page(
             'Optivac Consents',
-            'Optivac',
+            'Consentements Optivac',
             'manage_options',
             'optivac-consents',
             [$this, 'render'],

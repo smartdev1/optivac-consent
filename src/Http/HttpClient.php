@@ -3,23 +3,25 @@
 namespace OptivacConsent\Http;
 
 use OptivacConsent\Support\Constants;
+use OptivacConsent\Infrastructure\Logger;
 
 class HttpClient
 {
     private string $baseUrl;
     private string $apiKey;
-    private string $authType;
-    private string $username;
-    private string $password;
+    private Logger $logger;
     private int    $timeout = 10;
 
-    public function __construct()
+    public function __construct(Logger $logger)
     {
-        $this->baseUrl  = rtrim(get_option(Constants::OPTION_API_URL, 'https://ws-test-optivac.makeessens.fr'), '/');
-        $this->apiKey   = get_option(Constants::OPTION_API_KEY, '');
-        $this->authType = get_option('optivac_auth_type', 'bearer');
-        $this->username = get_option('optivac_api_username', '');
-        $this->password = get_option('optivac_api_password', '');
+        $this->logger  = $logger;
+        $this->baseUrl = rtrim(
+            get_option(Constants::OPTION_API_URL, 'https://ws-test-optivac.makeessens.fr'),
+            '/'
+        );
+        $this->apiKey = defined('OPTIVAC_API_KEY')
+            ? OPTIVAC_API_KEY
+            : get_option(Constants::OPTION_API_KEY, '');
     }
 
     public function get(string $endpoint, array $query = []): array
@@ -36,15 +38,15 @@ class HttpClient
 
     private function request(string $method, string $url, array $args = []): array
     {
-        $headers = [
-            'Content-Type' => 'application/json',
-            'Accept'       => 'application/json',
-        ];
-
-        $authHeader = $this->buildAuthHeader();
-        if ($authHeader) {
-            $headers['Authorization'] = $authHeader;
+        if (empty($this->apiKey)) {
+            throw new ApiException('Bearer token is not configured in Optivac Settings.', 0);
         }
+
+        $headers = [
+            'Content-Type'  => 'application/json',
+            'Accept'        => 'application/json',
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ];
 
         $response = wp_remote_request($url, array_merge([
             'method'  => $method,
@@ -71,26 +73,6 @@ class HttpClient
             'status' => $status,
             'body'   => $decoded ?? [],
         ];
-    }
-
-    private function buildAuthHeader(): string
-    {
-        switch ($this->authType) {
-            case 'bearer':
-                return $this->apiKey ? 'Bearer ' . $this->apiKey : '';
-
-            case 'basic':
-                if ($this->username && $this->password) {
-                    return 'Basic ' . base64_encode($this->username . ':' . $this->password);
-                }
-                return '';
-
-            case 'apikey':
-                return $this->apiKey ? 'X-API-Key ' . $this->apiKey : '';
-
-            default:
-                return '';
-        }
     }
 
     private function buildUrl(string $endpoint, array $query = []): string

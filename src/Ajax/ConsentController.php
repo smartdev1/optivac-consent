@@ -3,33 +3,22 @@
 namespace OptivacConsent\Ajax;
 
 use OptivacConsent\Domain\ConsentManager;
-use OptivacConsent\Infrastructure\EmailResolver;
-use OptivacConsent\Infrastructure\PendingConsentRepository;
 use OptivacConsent\Support\Constants;
 
 class ConsentController
 {
-    private ConsentManager           $manager;
-    private EmailResolver            $emailResolver;
-    private PendingConsentRepository $pending;
+    private ConsentManager $manager;
 
-    public function __construct(
-        ConsentManager $manager,
-        EmailResolver $emailResolver,
-        PendingConsentRepository $pending
-    ) {
-        $this->manager       = $manager;
-        $this->emailResolver = $emailResolver;
-        $this->pending       = $pending;
+    public function __construct(ConsentManager $manager)
+    {
+        $this->manager = $manager;
     }
 
     public function register(): void
     {
+        // Endpoint conservé pour usage API externe ou futur besoin
         add_action('wp_ajax_optivac_status', [$this, 'status']);
-        add_action('wp_ajax_nopriv_optivac_status', [$this, 'status']);
-
         add_action('wp_ajax_optivac_validate', [$this, 'validate']);
-        add_action('wp_ajax_nopriv_optivac_validate', [$this, 'validate']);
     }
 
     private function verifyNonce(): void
@@ -49,21 +38,7 @@ class ConsentController
         $email = sanitize_email($_POST['email'] ?? '');
 
         if (!$email) {
-            $email = $this->emailResolver->resolve();
-        }
-
-        if (!$email) {
-            wp_send_json_error(['message' => 'Email required'], 400);
-        }
-
-        // Consentement déjà en attente → pas besoin d'afficher la modale
-        if ($this->pending->findByEmail($email)) {
-            wp_send_json_success([
-                'newsletter'      => ['needsConsent' => false, 'granted' => false, 'source' => '', 'policyVersion' => '', 'modalConsentVisible' => false],
-                'offers'          => ['needsConsent' => false, 'granted' => false, 'source' => '', 'policyVersion' => '', 'modalConsentVisible' => false],
-                'needsAnyConsent' => false,
-                'pending'         => true,
-            ]);
+            wp_send_json_error(['message' => 'Invalid email']);
         }
 
         $status = $this->manager->getStatus($email);
@@ -80,18 +55,12 @@ class ConsentController
         $offers     = filter_var($_POST['offers'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $policy     = sanitize_text_field($_POST['policyVersion'] ?? '');
 
-        if (!$email) {
-            $email = $this->emailResolver->resolve();
-        }
-
         if (!$email || !$policy) {
-            wp_send_json_error(['message' => 'Invalid data'], 400);
+            wp_send_json_error(['message' => 'Invalid data']);
         }
 
         $success = $this->manager->validate($email, $newsletter, $offers, $policy);
 
-        $success
-            ? wp_send_json_success(['message' => 'Consent saved'])
-            : wp_send_json_error(['message' => 'Could not save consent'], 500);
+        $success ? wp_send_json_success() : wp_send_json_error();
     }
 }

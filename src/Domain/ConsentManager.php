@@ -8,7 +8,6 @@ use OptivacConsent\Http\ApiException;
 use OptivacConsent\Infrastructure\Cache;
 use OptivacConsent\Infrastructure\Logger;
 use OptivacConsent\Infrastructure\PendingConsentRepository;
-use OptivacConsent\Support\Constants;
 
 class ConsentManager
 {
@@ -34,18 +33,22 @@ class ConsentManager
         $cached = $this->cache->get($email);
 
         if ($cached !== null) {
+            $this->logger->debug('getStatus: cache hit', ['email' => $email]);
             return new ConsentStatus($cached);
         }
+
+        $this->logger->debug('getStatus: cache miss, calling API', ['email' => $email]);
 
         try {
             $response = $this->api->getAllStatus($email);
             $data     = $response['body'] ?? [];
 
             $this->cache->set($email, $data);
+            $this->logger->info('getStatus: API response cached', ['email' => $email]);
 
             return new ConsentStatus($data);
         } catch (ApiException $e) {
-            $this->logger->error('getStatus failed', [
+            $this->logger->error('getStatus: API call failed', [
                 'email' => $email,
                 'error' => $e->getMessage(),
                 'code'  => $e->getStatusCode(),
@@ -61,91 +64,93 @@ class ConsentManager
         bool $offers,
         string $policyVersion
     ): bool {
-        $accountId = $this->resolveAccountId($email);
+        $this->logger->info('validate: start', [
+            'email'      => $email,
+            'newsletter' => $newsletter,
+            'offers'     => $offers,
+            'policy'     => $policyVersion,
+        ]);
 
-        // Pas d'accountId connu → stockage local en attente
-        if ($accountId === 0) {
+        try {
+            return $this->sendToApi($email, $newsletter, $offers, $policyVersion);
+        } catch (ApiException $e) {
+            $this->logger->error('validate: API failed, storing pending', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+                'code'  => $e->getStatusCode(),
+            ]);
+
             $this->storePending($email, $newsletter, $offers, $policyVersion);
-            return true; 
-        }
 
-        return $this->sendToApi($accountId, $email, $newsletter, $offers, $policyVersion);
+            return true;
+        }
     }
 
-    /**
-     * Rejoue les consentements en attente pour un email
-     * dont on vient de résoudre l'accountId (ex: après une commande WooCommerce)
-     */
     public function flushPending(string $email): void
     {
         $consent = $this->pending->findByEmail($email);
 
         if (!$consent) {
+            $this->logger->debug('flushPending: nothing to flush', ['email' => $email]);
             return;
         }
 
-        $accountId = $this->resolveAccountId($email);
+        $this->logger->info('flushPending: found pending consent, retrying API', ['email' => $email]);
 
-        if ($accountId === 0) {
-            $this->logger->warning('flushPending: accountId still unresolved', ['email' => $email]);
-            return;
-        }
+        try {
+            $success = $this->sendToApi(
+                $email,
+                (bool) $consent['newsletter'],
+                (bool) $consent['offers'],
+                $consent['policy_version']
+            );
 
-        $success = $this->sendToApi(
-            $accountId,
-            $email,
-            (bool) $consent['newsletter'],
-            (bool) $consent['offers'],
-            $consent['policy_version']
-        );
-
-        if ($success) {
-            $this->pending->delete($email);
-            $this->logger->info('flushPending: consent sent and cleared', ['email' => $email]);
+            if ($success) {
+                $this->pending->delete($email);
+                $this->logger->info('flushPending: consent sent and cleared', ['email' => $email]);
+            } else {
+                $this->logger->warning('flushPending: API returned non-success status', ['email' => $email]);
+            }
+        } catch (ApiException $e) {
+            $this->logger->warning('flushPending: API still unavailable', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+                'code'  => $e->getStatusCode(),
+            ]);
         }
     }
 
     private function sendToApi(
-        int $accountId,
         string $email,
         bool $newsletter,
         bool $offers,
         string $policyVersion
     ): bool {
         $payload = [
-            'accountId'          => $accountId,
+            'email'              => $email,
             'newsletter_consent' => $newsletter,
             'offers_consent'     => $offers,
             'policyVersion'      => $policyVersion,
         ];
 
-        $this->logger->info('validate payload', $payload);
+        $this->logger->debug('sendToApi: payload', $payload);
 
-        try {
-            $response = $this->api->validate($payload);
+        $response = $this->api->validate($payload);
 
-            $this->logger->info('validate response', [
-                'status' => $response['status'],
-                'body'   => $response['body'],
-            ]);
+        $success = in_array($response['status'], [200, 201], true);
 
-            $success = in_array($response['status'], [200, 201], true);
+        $this->logger->info('sendToApi: response', [
+            'status'  => $response['status'],
+            'success' => $success,
+            'email'   => $email,
+        ]);
 
-            if ($success) {
-                $this->cache->delete($email);
-            }
-
-            return $success;
-        } catch (ApiException $e) {
-            $this->logger->error('validate failed', [
-                'email'   => $email,
-                'payload' => $payload,
-                'error'   => $e->getMessage(),
-                'code'    => $e->getStatusCode(),
-            ]);
-
-            return false;
+        if ($success) {
+            $this->cache->delete($email);
+            $this->logger->debug('sendToApi: cache invalidated', ['email' => $email]);
         }
+
+        return $success;
     }
 
     private function storePending(
@@ -156,17 +161,10 @@ class ConsentManager
     ): void {
         $this->pending->save($email, $newsletter, $offers, $policyVersion);
 
-        $this->logger->info('consent stored locally (no accountId)', [
+        $this->logger->info('storePending: consent saved locally', [
             'email'      => $email,
             'newsletter' => $newsletter,
             'offers'     => $offers,
         ]);
-    }
-
-    private function resolveAccountId(string $email): int
-    {
-        $user = get_user_by('email', $email);
-
-        return $user ? $user->ID : 0;
     }
 }

@@ -39,13 +39,13 @@ class HttpClient
     private function request(string $method, string $url, array $args = []): array
     {
         if (empty($this->apiKey)) {
-            throw new ApiException('Bearer token is not configured in Optivac Settings.', 0);
+            throw new ApiException('X-OPTIVAC-API-KEY is not configured.', 0);
         }
 
         $headers = [
-            'Content-Type'  => 'application/json',
-            'Accept'        => 'application/json',
-            'Authorization' => 'Bearer ' . $this->apiKey,
+            'Content-Type'      => 'application/json',
+            'Accept'            => 'application/json',
+            'X-OPTIVAC-API-KEY' => $this->apiKey,
         ];
 
         $response = wp_remote_request($url, array_merge([

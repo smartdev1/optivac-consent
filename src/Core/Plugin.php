@@ -5,6 +5,7 @@ namespace OptivacConsent\Core;
 use OptivacConsent\Ajax\ConsentController;
 use OptivacConsent\Admin\AdminMenu;
 use OptivacConsent\Admin\SettingsPage;
+use OptivacConsent\API\BrevoWebhookController;
 use OptivacConsent\Presentation\AssetsManager;
 use OptivacConsent\Infrastructure\WooCommerceIntegration;
 
@@ -32,6 +33,10 @@ class Plugin
     {
         $this->container
             ->get(ConsentController::class)
+            ->register();
+
+        $this->container
+            ->get(BrevoWebhookController::class)
             ->register();
 
         if (is_admin()) {

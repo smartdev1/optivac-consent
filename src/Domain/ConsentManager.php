@@ -62,7 +62,7 @@ class ConsentManager
         string $policyVersion
     ): bool {
         try {
-            return $this->sendToApi($email, $newsletter, $offers, $policyVersion);
+            return $this->sendToApi($email, $newsletter, $offers, $policyVersion, Constants::SOURCE_WORDPRESS);
         } catch (ApiException $e) {
             $this->logger->error('validate failed - storing pending', [
                 'email' => $email,
@@ -70,7 +70,37 @@ class ConsentManager
                 'code'  => $e->getStatusCode(),
             ]);
             $this->storePending($email, $newsletter, $offers, $policyVersion);
+
             return true;
+        }
+    }
+
+    /**
+     * Révoque un consentement suite à une désinscription depuis Brevo.
+     */
+    public function revoke(string $email, ?bool $newsletter, ?bool $offers): bool
+    {
+        try {
+            $current = $this->getStatus($email);
+
+            $newsletterValue = $newsletter ?? $current->newsletterGranted();
+            $offersValue     = $offers     ?? $current->offersGranted();
+
+            $this->logger->info('revoke initiated from Brevo', [
+                'email'      => $email,
+                'newsletter' => $newsletterValue,
+                'offers'     => $offersValue,
+            ]);
+
+            return $this->sendToApi($email, $newsletterValue, $offersValue, 'v1', Constants::SOURCE_BREVO);
+        } catch (ApiException $e) {
+            $this->logger->error('revoke failed', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+                'code'  => $e->getStatusCode(),
+            ]);
+
+            return false;
         }
     }
 
@@ -87,7 +117,8 @@ class ConsentManager
                 $email,
                 (bool) $consent['newsletter'],
                 (bool) $consent['offers'],
-                $consent['policy_version']
+                $consent['policy_version'],
+                Constants::SOURCE_WORDPRESS
             );
 
             if ($success) {
@@ -106,21 +137,22 @@ class ConsentManager
         string $email,
         bool $newsletter,
         bool $offers,
-        string $policyVersion
+        string $policyVersion,
+        string $source
     ): bool {
         $payload = [
             'email'              => $email,
             'newsletter_consent' => $newsletter,
             'offers_consent'     => $offers,
             'policyVersion'      => $policyVersion,
-            'source'             => Constants::SOURCE_WORDPRESS,
+            'source'             => $source,
         ];
 
-        $this->logger->info('validate payload', $payload);
+        $this->logger->info('sendToApi payload', $payload);
 
         $response = $this->api->validate($payload);
 
-        $this->logger->info('validate response', [
+        $this->logger->info('sendToApi response', [
             'status' => $response['status'],
             'body'   => $response['body'],
         ]);

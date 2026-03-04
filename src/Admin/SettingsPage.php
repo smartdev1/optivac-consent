@@ -29,11 +29,13 @@ class SettingsPage
         register_setting('optivac_settings_group', 'optivac_auth_type');
         register_setting('optivac_settings_group', 'optivac_api_username');
         register_setting('optivac_settings_group', 'optivac_api_password');
+        register_setting('optivac_settings_group', 'optivac_brevo_webhook_secret');
     }
 
     public function render(): void
     {
-        $authType = get_option('optivac_auth_type', 'bearer');
+        $authType   = get_option('optivac_auth_type', 'bearer');
+        $webhookUrl = rest_url('optivac/v1/brevo/unsubscribe');
         ?>
         <div class="wrap">
             <h1>Optivac — Configuration API</h1>
@@ -53,10 +55,10 @@ class SettingsPage
                         <th scope="row">Type d'authentification</th>
                         <td>
                             <select name="optivac_auth_type" id="optivac_auth_type" onchange="optivacToggleAuth(this.value)">
-                                <option value="bearer"  <?php selected($authType, 'bearer'); ?>>Bearer Token</option>
-                                <option value="basic"   <?php selected($authType, 'basic'); ?>>Basic Auth (username / password)</option>
-                                <option value="apikey"  <?php selected($authType, 'apikey'); ?>>X-API-Key</option>
-                                <option value="none"    <?php selected($authType, 'none'); ?>>Aucune</option>
+                                <option value="bearer" <?php selected($authType, 'bearer'); ?>>Bearer Token</option>
+                                <option value="basic"  <?php selected($authType, 'basic'); ?>>Basic Auth (username / password)</option>
+                                <option value="apikey" <?php selected($authType, 'apikey'); ?>>X-API-Key</option>
+                                <option value="none"   <?php selected($authType, 'none'); ?>>Aucune</option>
                             </select>
                         </td>
                     </tr>
@@ -82,6 +84,19 @@ class SettingsPage
                             <input type="password" name="optivac_api_password"
                                    value="<?php echo esc_attr(get_option('optivac_api_password')); ?>"
                                    class="regular-text" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Brevo Webhook Secret</th>
+                        <td>
+                            <input type="password" name="optivac_brevo_webhook_secret"
+                                   value="<?php echo esc_attr(get_option('optivac_brevo_webhook_secret')); ?>"
+                                   class="regular-text" />
+                            <p class="description">
+                                Clé HMAC partagée avec Brevo pour sécuriser les webhooks entrants.<br>
+                                URL à renseigner dans Brevo &rarr; Webhooks :
+                                <code><?php echo esc_html($webhookUrl); ?></code>
+                            </p>
                         </td>
                     </tr>
                 </table>

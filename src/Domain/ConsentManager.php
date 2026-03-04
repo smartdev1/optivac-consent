@@ -59,10 +59,20 @@ class ConsentManager
         string $email,
         bool $newsletter,
         bool $offers,
-        string $policyVersion
+        string $policyVersion,
+        string $firstname = '',
+        string $lastname  = ''
     ): bool {
         try {
-            return $this->sendToApi($email, $newsletter, $offers, $policyVersion, Constants::SOURCE_WORDPRESS);
+            return $this->sendToApi(
+                $email,
+                $newsletter,
+                $offers,
+                $policyVersion,
+                Constants::SOURCE_WORDPRESS,
+                $firstname,
+                $lastname
+            );
         } catch (ApiException $e) {
             $this->logger->error('validate failed - storing pending', [
                 'email' => $email,
@@ -76,7 +86,10 @@ class ConsentManager
     }
 
     /**
-     * Révoque un consentement suite à une désinscription depuis Brevo.
+     * Révoque un ou plusieurs consentements.
+     * Appelé depuis BrevoWebhookController quand Brevo notifie une désinscription.
+     *
+     * $newsletter / $offers : false = révoquer, null = conserver l'état actuel
      */
     public function revoke(string $email, ?bool $newsletter, ?bool $offers): bool
     {
@@ -86,13 +99,19 @@ class ConsentManager
             $newsletterValue = $newsletter ?? $current->newsletterGranted();
             $offersValue     = $offers     ?? $current->offersGranted();
 
-            $this->logger->info('revoke initiated from Brevo', [
+            $this->logger->info('revoke initiated', [
                 'email'      => $email,
                 'newsletter' => $newsletterValue,
                 'offers'     => $offersValue,
             ]);
 
-            return $this->sendToApi($email, $newsletterValue, $offersValue, 'v1', Constants::SOURCE_BREVO);
+            return $this->sendToApi(
+                $email,
+                $newsletterValue,
+                $offersValue,
+                'v1',
+                Constants::SOURCE_BREVO
+            );
         } catch (ApiException $e) {
             $this->logger->error('revoke failed', [
                 'email' => $email,
@@ -138,7 +157,9 @@ class ConsentManager
         bool $newsletter,
         bool $offers,
         string $policyVersion,
-        string $source
+        string $source,
+        string $firstname = '',
+        string $lastname  = ''
     ): bool {
         $payload = [
             'email'              => $email,
@@ -147,6 +168,14 @@ class ConsentManager
             'policyVersion'      => $policyVersion,
             'source'             => $source,
         ];
+
+        if (!empty($firstname)) {
+            $payload['firstname'] = $firstname;
+        }
+
+        if (!empty($lastname)) {
+            $payload['lastname'] = $lastname;
+        }
 
         $this->logger->info('sendToApi payload', $payload);
 

@@ -23,11 +23,11 @@ class BrevoWebhookController
         register_rest_route('optivac/v1', '/brevo/unsubscribe', [
             'methods'             => 'POST',
             'callback'            => [$this, 'handleUnsubscribe'],
-            'permission_callback' => [$this, 'verifySignature'],
+            'permission_callback' => [$this, 'verifyToken'],
         ]);
     }
 
-    public function verifySignature(\WP_REST_Request $request): bool
+    public function verifyToken(\WP_REST_Request $request): bool
     {
         $secret = get_option('optivac_brevo_webhook_secret', '');
 
@@ -45,14 +45,14 @@ class BrevoWebhookController
         $payload = $request->get_json_params();
 
         $email = sanitize_email($payload['email'] ?? '');
-        $type  = strtoupper(sanitize_text_field($payload['type'] ?? ''));
+        $type  = strtoupper(sanitize_text_field($payload['type'] ?? 'NEWSLETTER'));
 
         if (!is_email($email)) {
             return new \WP_REST_Response(['message' => 'Invalid email'], 400);
         }
 
         if (!in_array($type, ['NEWSLETTER', 'OFFERS'], true)) {
-            return new \WP_REST_Response(['message' => 'Invalid type. Expected NEWSLETTER or OFFERS'], 400);
+            $type = 'NEWSLETTER';
         }
 
         $newsletter = ($type === 'NEWSLETTER') ? false : null;
